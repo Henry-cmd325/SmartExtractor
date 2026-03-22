@@ -1,23 +1,59 @@
 <script setup lang="ts">
+const selectedPdfFile = ref<File | null>(null)
+const isParsing = ref(false)
+const exportFeedbackMessage = ref('')
+
+const onFileSelected = (file: File) => {
+  selectedPdfFile.value = file
+  isParsing.value = false
+  exportFeedbackMessage.value = 'PDF cargado. Presiona "Export to Excel" para iniciar el parseo.'
+}
+
+const onExportClicked = async () => {
+  if (!selectedPdfFile.value || isParsing.value) {
+    return
+  }
+
+  isParsing.value = true
+  exportFeedbackMessage.value = 'Enviando archivo para parseo...'
+
+  await new Promise(resolve => setTimeout(resolve, 1200))
+
+  isParsing.value = false
+  exportFeedbackMessage.value = 'Parseo iniciado. En breve podrás exportar el resultado a Excel.'
+}
+
 useSeoMeta({
-  title: 'Inicio'
+  title: 'Dashboard'
 })
 </script>
 
 <template>
-  <main class="min-h-screen bg-default">
-    <UContainer class="flex min-h-screen items-center py-16">
-      <section class="w-full rounded-2xl border border-default bg-muted/30 p-8 sm:p-10">
-        <p class="text-sm font-medium uppercase tracking-[0.24em] text-muted">
-          Smart Extractor
-        </p>
-        <h1 class="mt-4 text-4xl font-semibold text-highlighted sm:text-5xl">
-          Proyecto limpio y listo para empezar.
-        </h1>
-        <p class="mt-4 max-w-2xl text-base leading-7 text-toned">
-          Se eliminó la plantilla por defecto de Nuxt UI para dejar una base mínima sobre la que puedas construir.
-        </p>
-      </section>
-    </UContainer>
-  </main>
+  <div class="flex h-screen overflow-hidden bg-surface">
+    <AppSidebar />
+
+    <main class="flex-1 ml-20 flex flex-col overflow-hidden">
+      <AppHeader />
+
+      <!-- Content Area: Asymmetric Layout -->
+      <div class="flex-1 flex gap-0 overflow-hidden">
+        <!-- Left Column: Interaction Zone -->
+        <section class="flex-1 overflow-y-auto px-8 py-6 space-y-8">
+          <DropZone @file-selected="onFileSelected" />
+          <!-- <UChatPrompt placeholder="Puedes escribir como quieres que se exporten tus datos">
+            <UChatPromptSubmit />
+          </UChatPrompt> -->
+          <ResultsTable
+            :has-pdf="Boolean(selectedPdfFile)"
+            :is-parsing="isParsing"
+            :feedback-message="exportFeedbackMessage"
+            @export-clicked="onExportClicked"
+          />
+        </section>
+
+        <!-- Right Column: PDF Preview -->
+        <PdfPreview :pdf-file="selectedPdfFile" />
+      </div>
+    </main>
+  </div>
 </template>

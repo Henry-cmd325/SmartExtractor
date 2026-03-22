@@ -1,0 +1,1 @@
+No uses pnpm solo usa npm por favor

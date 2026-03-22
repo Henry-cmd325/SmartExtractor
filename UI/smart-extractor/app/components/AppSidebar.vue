@@ -1,7 +1,7 @@
 <template>
   <aside class="fixed left-0 top-0 h-screen w-20 flex flex-col items-center py-8 z-40 bg-surface-container-low border-r border-outline-variant/15 shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
     <div class="mb-12">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dim flex items-center justify-center shadow-lg shadow-primary/20">
+      <div class="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-primary-dim flex items-center justify-center shadow-lg shadow-primary/20">
         <span
           class="material-symbols-outlined text-on-primary-fixed"
           style="font-variation-settings: 'FILL' 1;"

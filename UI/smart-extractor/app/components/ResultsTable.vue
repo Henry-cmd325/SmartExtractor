@@ -1,3 +1,35 @@
+<script setup lang="ts">
+const props = withDefaults(defineProps<{
+  hasPdf?: boolean
+  isParsing?: boolean
+  feedbackMessage?: string
+}>(), {
+  hasPdf: false,
+  isParsing: false,
+  feedbackMessage: ''
+})
+
+const emit = defineEmits<{
+  exportClicked: []
+}>()
+
+const exportLabel = computed(() => {
+  if (props.isParsing) {
+    return 'Parsing...'
+  }
+
+  return 'Export to Excel'
+})
+
+const onExportClick = () => {
+  if (!props.hasPdf || props.isParsing) {
+    return
+  }
+
+  emit('exportClicked')
+}
+</script>
+
 <template>
   <div class="space-y-4">
     <div class="flex justify-between items-end px-1">
@@ -9,11 +41,27 @@
           Live Parser Stream v2.0.4
         </p>
       </div>
-      <button class="flex items-center gap-2 bg-surface-container-high hover:bg-surface-variant border border-outline-variant/20 px-4 py-2 rounded-xl transition-all">
+      <button
+        type="button"
+        class="flex items-center gap-2 border border-outline-variant/20 px-4 py-2 rounded-xl transition-all"
+        :class="[
+          hasPdf && !isParsing
+            ? 'bg-surface-container-high hover:bg-surface-variant text-on-surface'
+            : 'bg-surface-container-low text-on-surface-variant cursor-not-allowed opacity-70'
+        ]"
+        :disabled="!hasPdf || isParsing"
+        @click="onExportClick"
+      >
         <span class="material-symbols-outlined text-sm">download</span>
-        <span class="font-label text-xs uppercase tracking-widest">Export to Excel</span>
+        <span class="font-label text-xs uppercase tracking-widest">{{ exportLabel }}</span>
       </button>
     </div>
+    <p
+      class="font-body text-sm px-1"
+      :class="isParsing ? 'text-primary' : 'text-on-surface-variant'"
+    >
+      {{ feedbackMessage || 'Sube un PDF para habilitar la exportación.' }}
+    </p>
     <div class="bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10">
       <table class="w-full text-left border-collapse">
         <thead class="bg-surface-container-high/50">

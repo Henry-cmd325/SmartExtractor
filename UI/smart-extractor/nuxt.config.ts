@@ -5,6 +5,19 @@ export default defineNuxtConfig({
     '@nuxt/ui'
   ],
 
+  vite:{
+    optimizeDeps: {
+      include: [
+        'pdfjs-dist',
+        '@vue/devtools-core',
+        '@vue/devtools-kit'
+      ]
+    },
+    build: {
+      target: 'esnext'
+    }
+  },
+
   devtools: {
     enabled: true
   },

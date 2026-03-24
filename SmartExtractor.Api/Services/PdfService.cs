@@ -1,10 +1,13 @@
 ﻿using ClosedXML.Excel;
-using ImageMagick;
+using Docnet.Core;
+using Docnet.Core.Models;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Tabula;
 using Tabula.Extractors;
 using UglyToad.PdfPig;
 
-namespace SmartExtractor.Api.Modules.Services
+namespace SmartExtractor.Api.Services
 {
     public class PdfService
     {
@@ -106,27 +109,20 @@ namespace SmartExtractor.Api.Modules.Services
         {
             var imagenesBytes = new List<byte[]>();
 
-            // Configuramos la lectura del PDF
-            var settings = new MagickReadSettings
+            var dimensiones = new PageDimensions(2000, 2000);
+            using var documentReader = DocLib.Instance.GetDocReader(pdfBytes, dimensiones);
+
+            for (var indicePagina = 0; indicePagina < documentReader.GetPageCount(); indicePagina++)
             {
-                // 300 DPI es el "sweet spot" para OCR/VLM
-                Density = new Density(300)
-            };
+                using var pageReader = documentReader.GetPageReader(indicePagina);
+                var pixeles = pageReader.GetImage();
+                var ancho = pageReader.GetPageWidth();
+                var alto = pageReader.GetPageHeight();
 
-            using (var images = new MagickImageCollection())
-            {
-                // Leemos el PDF desde los bytes
-                images.Read(pdfBytes, settings);
-
-                foreach (var page in images)
-                {
-                    // Convertimos cada página a PNG (formato que Gemini ama)
-                    page.Format = MagickFormat.Png;
-
-                    using var ms = new MemoryStream();
-                    page.Write(ms);
-                    imagenesBytes.Add(ms.ToArray());
-                }
+                using var imagen = Image.LoadPixelData<Bgra32>(pixeles, ancho, alto);
+                using var stream = new MemoryStream();
+                imagen.SaveAsPng(stream);
+                imagenesBytes.Add(stream.ToArray());
             }
 
             return imagenesBytes;

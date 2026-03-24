@@ -1,6 +1,6 @@
 ﻿using ClosedXML.Excel;
 
-namespace SmartExtractor.Api.Modules.Services
+namespace SmartExtractor.Api.Services
 {
     public class ExcelService
     {

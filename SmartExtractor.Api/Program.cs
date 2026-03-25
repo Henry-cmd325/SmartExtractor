@@ -1,5 +1,4 @@
 using GenerativeAI;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.Google;
@@ -12,6 +11,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddOpenApi();
 builder.Services.AddAntiforgery();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var geminiApiKey = builder.Configuration["GEMINI_KEY"];
 var geminiModelId = builder.Configuration["Gemini:ModelId"]!;
@@ -29,7 +38,7 @@ builder.Services.AddKernel()
     );
 
 var client = new GenerativeModel(apiKey: geminiApiKey, model: geminiModelId);
-builder.Services.AddScoped<GenerativeModel>(_ => client);
+builder.Services.AddScoped(_ => client);
 
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ExcelService>();
@@ -121,6 +130,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseCors("AllowAll");
 
 app.UseAntiforgery();
 

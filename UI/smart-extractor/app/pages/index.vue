@@ -1,12 +1,17 @@
 <script setup lang="ts">
+import { usePdfExtraction } from '../composables/usePdfExtraction'
+
 const selectedPdfFile = ref<File | null>(null)
-const isParsing = ref(false)
-const exportFeedbackMessage = ref('')
+const {
+  extractPdfTables,
+  feedbackMessage: exportFeedbackMessage,
+  isParsing,
+  resetFeedback
+} = usePdfExtraction()
 
 const onFileSelected = (file: File) => {
   selectedPdfFile.value = file
-  isParsing.value = false
-  exportFeedbackMessage.value = 'PDF cargado. Presiona "Export to Excel" para iniciar el parseo.'
+  resetFeedback('PDF cargado. Presiona "Export to Excel" para iniciar el parseo.')
 }
 
 const onExportClicked = async () => {
@@ -14,13 +19,7 @@ const onExportClicked = async () => {
     return
   }
 
-  isParsing.value = true
-  exportFeedbackMessage.value = 'Enviando archivo para parseo...'
-
-  await new Promise(resolve => setTimeout(resolve, 1200))
-
-  isParsing.value = false
-  exportFeedbackMessage.value = 'Parseo iniciado. En breve podrás exportar el resultado a Excel.'
+  await extractPdfTables(selectedPdfFile.value)
 }
 
 useSeoMeta({

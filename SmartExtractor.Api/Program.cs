@@ -1,7 +1,6 @@
-using GenerativeAI;
+using Azure;
+using Azure.AI.DocumentIntelligence;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.Google;
 using SmartExtractor.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,27 +21,21 @@ builder.Services.AddCors(options =>
     });
 });
 
-var geminiApiKey = builder.Configuration["GEMINI_KEY"];
-var geminiModelId = builder.Configuration["Gemini:ModelId"]!;
+var documentIntelligenceEndpoint = builder.Configuration["DocumentIntelligence:Endpoint"];
+var documentIntelligenceApiKey = builder.Configuration["DocumentIntelligence:ApiKey"];
 
-if (string.IsNullOrWhiteSpace(geminiApiKey))
+if (string.IsNullOrWhiteSpace(documentIntelligenceEndpoint) || string.IsNullOrWhiteSpace(documentIntelligenceApiKey))
 {
-    throw new InvalidOperationException("Falta configurar la clave `GEMINI_KEY`.");
+    throw new InvalidOperationException("Falta configurar `DocumentIntelligence:Endpoint` o `DocumentIntelligence:ApiKey`.");
 }
 
-builder.Services.AddKernel()
-    .AddGoogleAIGeminiChatCompletion(
-        modelId: geminiModelId,
-        apiKey: geminiApiKey,
-        apiVersion: GoogleAIVersion.V1
-    );
-
-var client = new GenerativeModel(apiKey: geminiApiKey, model: geminiModelId);
-builder.Services.AddScoped(_ => client);
+builder.Services.AddSingleton(_ => new DocumentIntelligenceClient(
+    new Uri(documentIntelligenceEndpoint),
+    new AzureKeyCredential(documentIntelligenceApiKey)));
 
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ExcelService>();
-builder.Services.AddScoped<DocumentAiService>();
+builder.Services.AddScoped<DocumentOCRService>();
 
 var app = builder.Build();
 
@@ -51,7 +44,8 @@ app.MapPost("/extract-tables", async (
     [FromForm] IFormFile pdf,
     PdfService pdfService,
     ExcelService excelService,
-    DocumentAiService documentAiService) =>
+    DocumentOCRService documentOCRService,
+    CancellationToken cancellationToken) =>
 {
     if (pdf.Length == 0)
     {
@@ -76,18 +70,9 @@ app.MapPost("/extract-tables", async (
 
         if (excelBytes is null)
         {
-            var imagenes = pdfService.ConvertirPdfAImagenes(pdfBytes);
             var tablas = new List<TableResponse>();
 
-            foreach (var imagen in imagenes)
-            {
-                var tablasExtraidas = await documentAiService.ExtraerTablasDesdeImagen(imagen);
-
-                if (tablasExtraidas.Count > 0)
-                {
-                    tablas.AddRange(tablasExtraidas);
-                }
-            }
+            tablas.AddRange(await documentOCRService.ExtraerTablasPdf(pdfBytes, cancellationToken));
 
             if (tablas.Count == 0)
             {

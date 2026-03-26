@@ -7,13 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.AI.DocumentIntelligence" Version="1.0.0" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="Docnet.Core" Version="2.*" />
     <PackageReference Include="Google_GenerativeAI" Version="3.6.3" />
-    <PackageReference Include="Google_GenerativeAI.Microsoft" Version="3.6.3" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.74.0" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.74.0-alpha" />
     <PackageReference Include="PdfPig" Version="0.1.13" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.*" />
     <PackageReference Include="Tabula" Version="0.1.5" />
@@ -22,5 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SmartExtractor.ServiceDefaults\SmartExtractor.ServiceDefaults.csproj" />
   </ItemGroup>
+
+  <ProjectExtensions><VisualStudio><UserProperties appsettings_1development_1json__JsonSchema="" /></VisualStudio></ProjectExtensions>
 
 </Project>

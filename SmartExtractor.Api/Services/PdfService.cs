@@ -89,7 +89,7 @@ namespace SmartExtractor.Api.Services
         {
             if (IsImageOnly(path))
             {
-                Console.WriteLine("⚠️ No se detectó texto. Enviando a IA (VLM)...");
+                Console.WriteLine("⚠️ No se detectó texto. Enviando a Azure Document Intelligence...");
                 return null;
             }
             else
@@ -101,7 +101,7 @@ namespace SmartExtractor.Api.Services
                 }
             }
 
-            Console.WriteLine("⚠️ No se pudo parsear. Enviando a IA (VLM)...");
+            Console.WriteLine("⚠️ No se pudo parsear. Enviando a Azure Document Intelligence...");
             return null;
         }
 

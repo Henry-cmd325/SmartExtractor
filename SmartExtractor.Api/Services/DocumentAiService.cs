@@ -1,10 +1,9 @@
-﻿using GenerativeAI;
+using GenerativeAI;
 using GenerativeAI.Types;
 using System.Text.Json;
 
 namespace SmartExtractor.Api.Services
 {
-    public record TableResponse(string Name, List<List<string?>> Rows);
     public class DocumentAiService(GenerativeModel client, ILogger<DocumentAiService> logger)
     {
         public async Task<List<TableResponse>> ExtraerTablasDesdeImagen(byte[] imageBytes)

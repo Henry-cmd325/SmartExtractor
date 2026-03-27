@@ -1,39 +1,60 @@
 using GenerativeAI;
 using GenerativeAI.Types;
+using System.Linq.Dynamic.Core;
 using System.Text.Json;
 
 namespace SmartExtractor.Api.Services
 {
     public class DocumentAiService(GenerativeModel client, ILogger<DocumentAiService> logger)
     {
-        public async Task<List<TableResponse>> ExtraerTablasDesdeImagen(byte[] imageBytes)
+        public record TableMetaData(int Id, int PageNumber, string TableName, List<string> Columns);
+        public record TableSelection(int TableId, string FilterExpression, string Reason);
+
+        public async Task<List<TableResponse>> TransformarDatos(List<TableResponse> tables, string userPrompt)
         {
-            if (imageBytes.Length == 0)
+            if (string.IsNullOrWhiteSpace(userPrompt))
             {
                 return [];
             }
 
+            var json = SerializeMetadata(tables);
+
             // El prompt debe ser MUY específico para que no te mande texto basura
             var systemPrompt = """
-                ROLE: High-precision data extraction expert.
-                TASK: Analyze the provided image and extract ALL tables into a structured JSON format.
-    
-                CONSTRAINTS:
-                1. Return ONLY a valid JSON array. No conversational text, no markdown code blocks (```json).
-                2. Adhere to this SCHEMA: 
-                   [
-                     {
-                       "name": "string (descriptive name)",
-                       "rows": [ ["cell1", "cell2"], ["data1", "data2"] ]
-                     }
-                   ]
-                3. Use null for empty cells. Do not skip columns.
-                4. If a value is unreadable, use "UNCERTAIN".
-                5. Maintain visual alignment: ensure row data matches the correct column headers.
+                ROLE: Data Orchestrator and C# Dynamic LINQ Generator.
+                TASK: Analyze the provided table metadata and the user's natural language request to generate a precise filtering plan.
+
+                CONSTRAINTS & RULES:
+                1. OUTPUT FORMAT: You MUST return ONLY a valid JSON object. No markdown formatting (```json), no conversational text.
+                2. DYNAMIC LINQ SYNTAX: The filter must be written for the System.Linq.Dynamic.Core library. 
+                   - The row data is represented as a string array called `it`. 
+                   - Use indices based on the provided metadata (e.g., `it[0]`, `it[1]`).
+                3. NULL/EMPTY SAFETY: Always check for empty strings before parsing numbers. 
+                   - Correct: `it[2] != "" && double.Parse(it[2]) > 500`
+                   - Incorrect: `double.Parse(it[2]) > 500`
+                4. SCHEMA REQUIREMENT: Your output must strictly adhere to this JSON structure:
+                     [
+                       {
+                         "tableId": 0,
+                         "filterExpression": "string (the Dynamic LINQ condition)",
+                         "reason": "string (brief explanation of the logic)"
+                       }
+                     ]
                 """;
+
+            var finalPrompt = $$"""
+                DOCUMENT METADATA:
+                {{json}}
+
+                USER REQUEST:
+                "{{userPrompt}}"
+
+                Based on the USER REQUEST, identify the relevant tables from the METADATA and generate the JSON array.
+            """;
 
             var request = new GenerateContentRequest() 
             { 
+                GenerationConfig = new() { ResponseMimeType = "application/json" },
                 SystemInstruction = new() 
                 { 
                     Parts = [new(systemPrompt)]
@@ -42,7 +63,7 @@ namespace SmartExtractor.Api.Services
                 [
                     new() 
                     { 
-                        Parts = [new() { InlineData = new Blob { Data = Convert.ToBase64String(imageBytes), MimeType = "image/png"} }] 
+                        Parts = [new() { Text = finalPrompt }] 
                     }
                 ] 
             }; 
@@ -64,8 +85,16 @@ namespace SmartExtractor.Api.Services
             {
                 var opciones = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-                return JsonSerializer.Deserialize<List<TableResponse>>(cleared, opciones)
+                var deserialized = JsonSerializer.Deserialize<List<TableSelection>>(cleared, opciones)
                     ?? TryDeserializeWrappedResponse(cleared, opciones);
+
+                if (deserialized == null)
+                {
+                    logger.LogWarning("La respuesta del modelo no se pudo deserializar en la estructura esperada. Respuesta: {Response}", cleared); 
+                    return [];
+                }
+
+                return ApplySelections(tables, deserialized);
             }
             catch (JsonException ex)
             {
@@ -74,7 +103,54 @@ namespace SmartExtractor.Api.Services
             }
         }
 
-        private static List<TableResponse> TryDeserializeWrappedResponse(string content, JsonSerializerOptions options)
+        private List<TableResponse> ApplySelections(List<TableResponse> tables, List<TableSelection> selections)
+        {
+            var tablasFiltradas = new List<TableResponse>(selections.Count);
+
+            foreach (var selection in selections)
+            {
+                var table = tables.FirstOrDefault(t => t.Id == selection.TableId);
+
+                if (table is null)
+                {
+                    logger.LogWarning("No se encontró la tabla con Id {TableId} en la colección proporcionada.", selection.TableId);
+                    continue;
+                }
+
+                List<List<string?>> filasFiltradas;
+
+                try
+                {
+                    filasFiltradas = string.IsNullOrWhiteSpace(selection.FilterExpression)
+                        ? [.. table.Rows]
+                        : [.. table.Rows
+                            .AsQueryable()
+                            .Where(selection.FilterExpression)];
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "No se pudo aplicar el filtro dinámico a la tabla con Id {TableId}.", selection.TableId);
+                    continue;
+                }
+
+                tablasFiltradas.Add(table with { Rows = filasFiltradas });
+            }
+
+            return tablasFiltradas;
+        }
+
+        private static string SerializeMetadata(List<TableResponse> tables)
+        {
+            var metadata = tables.Select(table => new TableMetaData(
+                table.Id,
+                table.PageNumber,
+                table.Name,
+                table.Rows.FirstOrDefault()?.Select(cell => cell ?? string.Empty).ToList() ?? []));
+
+            return JsonSerializer.Serialize(metadata);
+        }
+
+        private static List<TableSelection>? TryDeserializeWrappedResponse(string content, JsonSerializerOptions options)
         {
             using var document = JsonDocument.Parse(content);
 
@@ -87,11 +163,11 @@ namespace SmartExtractor.Api.Services
             {
                 if (document.RootElement.TryGetProperty(propertyName, out var property))
                 {
-                    return JsonSerializer.Deserialize<List<TableResponse>>(property.GetRawText(), options) ?? [];
+                    return JsonSerializer.Deserialize<List<TableSelection>>(property.GetRawText(), options);
                 }
             }
 
-            return [];
+            return null;
         }
     }
 }

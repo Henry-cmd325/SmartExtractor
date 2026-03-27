@@ -11,7 +11,7 @@ namespace SmartExtractor.Api.Services
 {
     public class PdfService
     {
-        private static bool IsImageOnly(string filePath)
+        private bool IsImageOnly(string filePath)
         {
             using var pdf = PdfDocument.Open(filePath);
 
@@ -24,7 +24,13 @@ namespace SmartExtractor.Api.Services
             return !page.Letters.Any();
         }
 
-        public static List<Table> ExtraerTodasLasTablas(string rutaPdf)
+        public int GetTotalPages(string filePath)
+        {
+            using var pdf = PdfDocument.Open(filePath);
+            return pdf.NumberOfPages;
+        }
+
+        public List<Table> ExtraerTodasLasTablas(string rutaPdf)
         {
             var todasLasTablas = new List<Table>();
 
@@ -52,7 +58,7 @@ namespace SmartExtractor.Api.Services
             return todasLasTablas;
         }
 
-        private static byte[] GenerarTablasEnExcel(IReadOnlyList<Table> tables)
+        private byte[] GenerarTablasEnExcel(IReadOnlyList<Table> tables)
         {
             using var libro = new XLWorkbook();
             int contadorHoja = 1;
@@ -85,7 +91,7 @@ namespace SmartExtractor.Api.Services
             return ms.ToArray();
         }
 
-        public static byte[]? ProcessPdfToExcel(string path)
+        public byte[]? ProcessPdfToExcel(string path)
         {
             if (IsImageOnly(path))
             {
@@ -103,6 +109,66 @@ namespace SmartExtractor.Api.Services
 
             Console.WriteLine("⚠️ No se pudo parsear. Enviando a Azure Document Intelligence...");
             return null;
+        }
+
+        public List<TableResponse> ProcessPdfToTableResponses(string path)
+        {
+            if (IsImageOnly(path))
+            {
+                Console.WriteLine("⚠️ No se detectó texto. Enviando a Azure Document Intelligence...");
+                return [];
+            }
+
+            var tableResponses = new List<TableResponse>();
+            var algorithm = new SpreadsheetExtractionAlgorithm();
+            var tableId = 1;
+
+            using (var document = PdfDocument.Open(path))
+            {
+                for (int pageNumber = 1; pageNumber <= document.NumberOfPages; pageNumber++)
+                {
+                    var pageArea = ObjectExtractor.Extract(document, pageNumber);
+                    var tables = algorithm.Extract(pageArea);
+
+                    if (tables == null || tables.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    foreach (var table in tables)
+                    {
+                        var filasLimpias = table.Rows.Where(fila =>
+                            fila.Count(celda => !string.IsNullOrWhiteSpace(celda.GetText())) > (fila.Count * 0.4)
+                        ).ToList();
+
+                        if (filasLimpias.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        var rows = filasLimpias
+                            .Select(fila => fila
+                                .Select(celda =>
+                                {
+                                    var contenido = celda.GetText().Trim();
+                                    return string.IsNullOrWhiteSpace(contenido) ? null : contenido;
+                                })
+                                .ToList())
+                            .ToList();
+
+                        tableResponses.Add(new TableResponse(tableId, pageNumber, $"Tabla {tableId}", rows));
+                        tableId++;
+                    }
+                }
+            }
+
+            if (tableResponses.Count > 0)
+            {
+                return tableResponses;
+            }
+
+            Console.WriteLine("⚠️ No se pudo parsear. Enviando a Azure Document Intelligence...");
+            return [];
         }
 
         public List<byte[]> ConvertirPdfAImagenes(byte[] pdfBytes)

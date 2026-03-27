@@ -2,6 +2,7 @@
 import { usePdfExtraction } from '../composables/usePdfExtraction'
 
 const selectedPdfFile = ref<File | null>(null)
+const userPrompt = ref('')
 const {
   extractPdfTables,
   feedbackMessage: exportFeedbackMessage,
@@ -19,7 +20,15 @@ const onExportClicked = async () => {
     return
   }
 
-  await extractPdfTables(selectedPdfFile.value)
+  await extractPdfTables(selectedPdfFile.value, userPrompt.value)
+}
+
+const onPromptSubmitted = async () => {
+  if (!selectedPdfFile.value || isParsing.value) {
+    return
+  }
+
+  await extractPdfTables(selectedPdfFile.value, userPrompt.value)
 }
 
 useSeoMeta({
@@ -39,9 +48,14 @@ useSeoMeta({
         <!-- Left Column: Interaction Zone -->
         <section class="flex-1 overflow-y-auto px-8 py-6 space-y-8">
           <DropZone @file-selected="onFileSelected" />
-          <!-- <UChatPrompt placeholder="Puedes escribir como quieres que se exporten tus datos">
+          <UChatPrompt
+            v-model="userPrompt"
+            placeholder="Puedes escribir aqui filtros o instrucciones para la exportacion..."
+            :disabled="!selectedPdfFile || isParsing"
+            @submit="onPromptSubmitted"
+          >
             <UChatPromptSubmit />
-          </UChatPrompt> -->
+          </UChatPrompt>
           <ResultsTable
             :has-pdf="Boolean(selectedPdfFile)"
             :is-parsing="isParsing"

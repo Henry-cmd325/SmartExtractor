@@ -3,6 +3,17 @@ const extractionToastId = 'pdf-extraction-toast'
 
 const excelMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
+const buildExtractTablesUrl = (userPrompt?: string) => {
+  const requestUrl = new URL(extractTablesEndpoint)
+  const trimmedPrompt = userPrompt?.trim()
+
+  if (trimmedPrompt) {
+    requestUrl.searchParams.set('userPrompt', trimmedPrompt)
+  }
+
+  return requestUrl.toString()
+}
+
 const getDownloadFileName = (response: Response, fallbackFileName: string) => {
   const contentDisposition = response.headers.get('content-disposition')
 
@@ -120,7 +131,7 @@ export const usePdfExtraction = () => {
     })
   }
 
-  const extractPdfTables = async (file: File) => {
+  const extractPdfTables = async (file: File, userPrompt?: string) => {
     if (isParsing.value) {
       return
     }
@@ -134,7 +145,7 @@ export const usePdfExtraction = () => {
     formData.append('pdf', file, file.name)
 
     try {
-      const response = await fetch(extractTablesEndpoint, {
+      const response = await fetch(buildExtractTablesUrl(userPrompt), {
         method: 'POST',
         body: formData
       })

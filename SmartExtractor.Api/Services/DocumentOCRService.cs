@@ -3,7 +3,7 @@ using Azure.AI.DocumentIntelligence;
 
 namespace SmartExtractor.Api.Services
 {
-    public record TableResponse(string Name, List<List<string?>> Rows);
+    public record TableResponse(int Id, int PageNumber, string Name, List<List<string?>> Rows);
 
     public class DocumentOCRService(DocumentIntelligenceClient client, IConfiguration configuration, ILogger<DocumentOCRService> logger)
     {
@@ -40,6 +40,9 @@ namespace SmartExtractor.Api.Services
             for (var indiceTabla = 0; indiceTabla < tablas.Count; indiceTabla++)
             {
                 var tabla = tablas[indiceTabla];
+                var pageNumber = tabla.BoundingRegions.Count > 0
+                    ? tabla.BoundingRegions[0].PageNumber
+                    : 1;
                 var filas = Enumerable.Range(0, tabla.RowCount)
                     .Select(_ => Enumerable.Repeat<string?>(null, tabla.ColumnCount).ToList())
                     .ToList();
@@ -51,7 +54,7 @@ namespace SmartExtractor.Api.Services
 
                 if (filas.Count > 0)
                 {
-                    tablasConvertidas.Add(new TableResponse($"Tabla {indiceTabla + 1}", filas));
+                    tablasConvertidas.Add(new TableResponse(indiceTabla + 1, pageNumber, $"Tabla {indiceTabla + 1}", filas));
                 }
             }
 

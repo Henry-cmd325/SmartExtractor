@@ -31,7 +31,8 @@ if (string.IsNullOrWhiteSpace(documentIntelligenceEndpoint) || string.IsNullOrWh
 
 builder.Services.AddSingleton(_ => new DocumentIntelligenceClient(
     new Uri(documentIntelligenceEndpoint),
-    new AzureKeyCredential(documentIntelligenceApiKey)));
+    new AzureKeyCredential(documentIntelligenceApiKey))
+);
 
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ExcelService>();
@@ -45,7 +46,9 @@ app.MapPost("/extract-tables", async (
     PdfService pdfService,
     ExcelService excelService,
     DocumentOCRService documentOCRService,
-    CancellationToken cancellationToken) =>
+    DocumentAiService documentAiService,
+    CancellationToken cancellationToken,
+    [FromQuery] string userPrompt) =>
 {
     if (pdf.Length == 0)
     {
@@ -58,31 +61,43 @@ app.MapPost("/extract-tables", async (
     }
 
     await using var pdfStream = new MemoryStream();
-    await pdf.CopyToAsync(pdfStream);
+    await pdf.CopyToAsync(pdfStream, cancellationToken);
     var pdfBytes = pdfStream.ToArray();
 
     var tempFilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.pdf");
-    await File.WriteAllBytesAsync(tempFilePath, pdfBytes);
+    await File.WriteAllBytesAsync(tempFilePath, pdfBytes, cancellationToken);
+
+    if (pdfService.GetTotalPages(tempFilePath) > 20)
+        return Results.BadRequest("El limite de páginas por PDF es 20. Por favor, reduce el número de páginas e inténtalo de nuevo.");
 
     try
     {
-        var excelBytes = PdfService.ProcessPdfToExcel(tempFilePath);
-
-        if (excelBytes is null)
+        var tablas = pdfService.ProcessPdfToTableResponses(tempFilePath);
+        byte[] excelBytes = [];
+        if (tablas.Count == 0)
         {
-            var tablas = new List<TableResponse>();
-
             tablas.AddRange(await documentOCRService.ExtraerTablasPdf(pdfBytes, cancellationToken));
 
             if (tablas.Count == 0)
             {
                 return Results.NotFound("No se encontraron tablas en el PDF.");
             }
-
-            excelBytes = excelService.GenerarExcelDesdeTablas(tablas);
         }
 
+        if (!string.IsNullOrWhiteSpace(userPrompt))
+        {
+            tablas = await documentAiService.TransformarDatos(tablas, userPrompt);
+
+            if (tablas.Count == 0)
+            {
+                return Results.NotFound("No se encontraron resultados para el filtro solicitado.");
+            }
+        }
+
+        excelBytes = excelService.GenerarExcelDesdeTablas(tablas);
+
         var outputFileName = $"{Path.GetFileNameWithoutExtension(pdf.FileName)}-tablas.xlsx";
+       
         return Results.File(
             excelBytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -98,9 +113,7 @@ app.MapPost("/extract-tables", async (
     finally
     {
         if (File.Exists(tempFilePath))
-        {
             File.Delete(tempFilePath);
-        }
     }
 })
 .Accepts<IFormFile>("multipart/form-data")

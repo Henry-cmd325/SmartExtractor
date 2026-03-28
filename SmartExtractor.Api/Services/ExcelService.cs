@@ -10,14 +10,19 @@ namespace SmartExtractor.Api.Services
 
             foreach (var tabla in tablas)
             {
+                var filasLimpias = tabla.Rows.Where(fila =>
+                    fila.Count(celda => !string.IsNullOrWhiteSpace(celda)) > (fila.Count * 0.4)
+                ).ToList();
+
                 // 1. Limpiamos el nombre de la hoja (máximo 31 caracteres y sin caracteres especiales)
-                var sheetName = string.IsNullOrWhiteSpace(tabla.Name) ? "Tabla Extraida" : tabla.Name;
+                var baseSheetName = string.IsNullOrWhiteSpace(tabla.Name) ? $"Tabla {tabla.Id}" : tabla.Name;
+                var sheetName = $"{baseSheetName}-P{tabla.PageNumber}-T{tabla.Id}";
                 var ws = workbook.Worksheets.Add(sheetName[..Math.Min(sheetName.Length, 31)]);
 
                 // 2. Llenamos las filas
-                for (int r = 0; r < tabla.Rows.Count; r++)
+                for (int r = 0; r < filasLimpias.Count; r++)
                 {
-                    var currentDataRow = tabla.Rows[r];
+                    var currentDataRow = filasLimpias[r];
                     for (int c = 0; c < currentDataRow.Count; c++)
                     {
                         // r + 1 porque Excel empieza en 1, no en 0
@@ -26,7 +31,7 @@ namespace SmartExtractor.Api.Services
                 }
 
                 // 3. Formato "Pro" (Solo si la tabla tiene datos)
-                if (tabla.Rows.Count > 0)
+                if (filasLimpias.Count > 0)
                 {
                     // Ponemos la primera fila en negrita y con fondo gris claro (Encabezados)
                     var headerRow = ws.Row(1);
@@ -37,7 +42,7 @@ namespace SmartExtractor.Api.Services
                     ws.Columns().AdjustToContents();
 
                     // Agregamos bordes básicos a toda la tabla
-                    var range = ws.Range(1, 1, tabla.Rows.Count, tabla.Rows[0].Count);
+                    var range = ws.Range(1, 1, filasLimpias.Count, filasLimpias[0].Count);
                     range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     range.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
                 }

@@ -1,4 +1,4 @@
-const extractTablesEndpoint = 'https://localhost:7114/extract-tables'
+const extractTablesEndpoint = `${useRuntimeConfig().public.apiBaseUrl}/extract-tables`
 const extractionToastId = 'pdf-extraction-toast'
 
 const excelMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

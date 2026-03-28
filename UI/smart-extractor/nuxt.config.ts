@@ -5,6 +5,13 @@ export default defineNuxtConfig({
     '@nuxt/ui'
   ],
 
+  runtimeConfig: {
+    public: {
+      // El valor aquí es el "default" por si no hay variable de entorno
+      apiBaseUrl: 'https://localhost:7114'
+    }
+  },
+
   vite:{
     optimizeDeps: {
       include: [

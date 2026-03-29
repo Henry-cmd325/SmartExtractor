@@ -5,11 +5,13 @@ WORKDIR /src
 
 # Copiar archivos de proyecto y restaurar dependencias
 # (Hacemos esto primero para aprovechar el caché de capas de Docker)
-COPY ["SmartExtractor.Api.csproj", "./"]
-RUN dotnet restore "./SmartExtractor.Api.csproj"
+COPY ["SmartExtractor.Api/SmartExtractor.Api.csproj", "SmartExtractor.Api/"]
+COPY ["SmartExtractor.ServiceDefaults/SmartExtractor.ServiceDefaults.csproj", "SmartExtractor.ServiceDefaults/"]
+RUN dotnet restore "SmartExtractor.Api/SmartExtractor.Api.csproj"
 
 # Copiar el resto del código fuente y compilar
 COPY . .
+WORKDIR /src/SmartExtractor.Api
 RUN dotnet build "./SmartExtractor.Api.csproj" -c Release -o /app/build
 
 # Publicar la aplicación optimizada

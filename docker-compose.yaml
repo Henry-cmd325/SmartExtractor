@@ -43,3 +43,7 @@ services:
     - target: 8080
       published: 8080
     restart: unless-stopped
+networks:
+  default:
+    external: true
+    name: dokploy-network

@@ -5,9 +5,13 @@ const props = defineProps<{
 
 const { $pdfjs } = useNuxtApp()
 
+type PdfjsClient = NonNullable<typeof $pdfjs>
+type PdfLoadingTask = ReturnType<PdfjsClient['getDocument']>
+type PdfDocument = Awaited<PdfLoadingTask['promise']>
+
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const previewScrollRef = ref<HTMLDivElement | null>(null)
-const pdfDocument = shallowRef<any | null>(null)
+const pdfDocument = shallowRef<PdfDocument | null>(null)
 const currentPage = ref(1)
 const totalPages = ref(0)
 const zoomLevel = ref(1)
@@ -81,6 +85,7 @@ const renderCurrentPage = async () => {
     context.clearRect(0, 0, canvas.width, canvas.height)
 
     await page.render({
+      canvas,
       canvasContext: context,
       viewport
     }).promise
@@ -101,7 +106,7 @@ const loadPdfFile = async (file: File) => {
   try {
     await destroyPdfDocument()
     const fileBuffer = await file.arrayBuffer()
-    const loadingTask = $pdfjs.getDocument({ data: new Uint8Array(fileBuffer) })
+    const loadingTask: PdfLoadingTask = $pdfjs.getDocument({ data: new Uint8Array(fileBuffer) })
     const loadedDocument = await loadingTask.promise
 
     pdfDocument.value = loadedDocument
@@ -110,8 +115,7 @@ const loadPdfFile = async (file: File) => {
 
     await nextTick()
     await renderCurrentPage()
-  }
-  finally {
+  } finally {
     isLoading.value = false
   }
 }
@@ -199,8 +203,7 @@ watch(() => props.pdfFile, async (file) => {
   if (file) {
     try {
       await loadPdfFile(file)
-    }
-    catch (error) {
+    } catch (error) {
       const detail = error instanceof Error ? error.message : 'Error desconocido'
       previewError.value = `No se pudo cargar el PDF: ${detail}`
     }
@@ -214,8 +217,7 @@ watch([currentPage, zoomLevel], async () => {
 
   try {
     await renderCurrentPage()
-  }
-  catch (error) {
+  } catch (error) {
     const detail = error instanceof Error ? error.message : 'Error desconocido'
     previewError.value = `No se pudo renderizar la página: ${detail}`
   }

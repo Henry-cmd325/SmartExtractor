@@ -1,9 +1,8 @@
-const extractTablesEndpoint = `${useRuntimeConfig().public.apiBaseUrl}/extract-tables`
 const extractionToastId = 'pdf-extraction-toast'
 
 const excelMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
-const buildExtractTablesUrl = (userPrompt?: string) => {
+const buildExtractTablesUrl = (extractTablesEndpoint: string, userPrompt?: string) => {
   const requestUrl = new URL(extractTablesEndpoint)
   const trimmedPrompt = userPrompt?.trim()
 
@@ -52,10 +51,12 @@ const downloadBlobFile = (blob: Blob, fileName: string) => {
 }
 
 export const usePdfExtraction = () => {
+  const runtimeConfig = useRuntimeConfig()
   const toast = useToast()
   const isParsing = ref(false)
   const feedbackMessage = ref('')
   const lastDownload = ref<{ blob: Blob, fileName: string } | null>(null)
+  const extractTablesEndpoint = `${runtimeConfig.public.apiBaseUrl}/extract-tables`
 
   const downloadLatestExcel = () => {
     if (!lastDownload.value) {
@@ -145,7 +146,7 @@ export const usePdfExtraction = () => {
     formData.append('pdf', file, file.name)
 
     try {
-      const response = await fetch(buildExtractTablesUrl(userPrompt), {
+      const response = await fetch(buildExtractTablesUrl(extractTablesEndpoint, userPrompt), {
         method: 'POST',
         body: formData
       })
@@ -200,16 +201,14 @@ export const usePdfExtraction = () => {
           variant: 'link'
         }
       })
-    }
-    catch (error) {
+    } catch (error) {
       const message = error instanceof Error
         ? error.message
         : 'No se pudo enviar el PDF a la API de extraccion.'
 
       feedbackMessage.value = `Error al procesar el PDF: ${message}`
       showErrorToast(feedbackMessage.value)
-    }
-    finally {
+    } finally {
       isParsing.value = false
     }
   }

@@ -1,5 +1,6 @@
 using Azure;
 using Azure.AI.DocumentIntelligence;
+using GenerativeAI;
 using Microsoft.AspNetCore.Mvc;
 using SmartExtractor.Api.Services;
 
@@ -23,32 +24,51 @@ builder.Services.AddCors(options =>
 
 var documentIntelligenceEndpoint = builder.Configuration["DocumentIntelligence:Endpoint"];
 var documentIntelligenceApiKey = builder.Configuration["DocumentIntelligence:ApiKey"];
+var geminiApiKey = builder.Configuration["GEMINI_KEY"];
+var geminiModelId = builder.Configuration["Gemini:ModelId"];
 
 if (string.IsNullOrWhiteSpace(documentIntelligenceEndpoint) || string.IsNullOrWhiteSpace(documentIntelligenceApiKey))
 {
     throw new InvalidOperationException("Falta configurar `DocumentIntelligence:Endpoint` o `DocumentIntelligence:ApiKey`.");
 }
 
+if (string.IsNullOrWhiteSpace(geminiApiKey) || string.IsNullOrWhiteSpace(geminiModelId))
+{
+    throw new InvalidOperationException("Falta configurar `GEMINI_KEY` o `Gemini:ModelId`.");
+}
+
+var normalizedGeminiModelId = geminiModelId.StartsWith("models/", StringComparison.OrdinalIgnoreCase)
+    ? geminiModelId
+    : $"models/{geminiModelId}";
+
 builder.Services.AddSingleton(_ => new DocumentIntelligenceClient(
     new Uri(documentIntelligenceEndpoint),
     new AzureKeyCredential(documentIntelligenceApiKey))
 );
 
+builder.Services.AddScoped(_ =>
+{
+    var googleAi = new GoogleAi(geminiApiKey);
+    return googleAi.CreateGenerativeModel(normalizedGeminiModelId);
+});
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ExcelService>();
 builder.Services.AddScoped<DocumentOCRService>();
+builder.Services.AddScoped<DocumentAiService>();
 
 var app = builder.Build();
 
 //Aqui van los endpoints de la API:
+app.MapGet("/", () => Results.Ok(new { status = "ok" }));
+
 app.MapPost("/extract-tables", async (
     [FromForm] IFormFile pdf,
-    PdfService pdfService,
-    ExcelService excelService,
-    DocumentOCRService documentOCRService,
-    DocumentAiService documentAiService,
+    [FromServices] PdfService pdfService,
+    [FromServices] ExcelService excelService,
+    [FromServices] DocumentOCRService documentOCRService,
+    [FromServices] DocumentAiService documentAiService,
     CancellationToken cancellationToken,
-    [FromQuery] string userPrompt) =>
+    [FromQuery] string userPrompt = "") =>
 {
     if (pdf.Length == 0)
     {

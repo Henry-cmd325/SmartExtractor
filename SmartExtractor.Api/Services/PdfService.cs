@@ -11,9 +11,11 @@ namespace SmartExtractor.Api.Services
 {
     public class PdfService
     {
+        private static readonly ParsingOptions PdfParsingOptions = new() { ClipPaths = true };
+
         private bool IsImageOnly(string filePath)
         {
-            using var pdf = PdfDocument.Open(filePath);
+            using var pdf = PdfDocument.Open(filePath, PdfParsingOptions);
 
             // Analizamos la primera página como muestra
             var page = pdf.GetPage(1);
@@ -26,15 +28,16 @@ namespace SmartExtractor.Api.Services
 
         public int GetTotalPages(string filePath)
         {
-            using var pdf = PdfDocument.Open(filePath);
+            using var pdf = PdfDocument.Open(filePath, PdfParsingOptions);
             return pdf.NumberOfPages;
         }
 
         public List<Table> ExtraerTodasLasTablas(string rutaPdf)
         {
             var todasLasTablas = new List<Table>();
+            var firmasVistas = new HashSet<string>(StringComparer.Ordinal);
 
-            using (var document = PdfDocument.Open(rutaPdf))
+            using (var document = PdfDocument.Open(rutaPdf, PdfParsingOptions))
             {
                 var algorithm = new SpreadsheetExtractionAlgorithm();
                 // Iteramos por cada página del PDF (PdfPig usa índice 1)
@@ -50,7 +53,17 @@ namespace SmartExtractor.Api.Services
                     // 3. Agregamos las tablas encontradas a nuestra lista maestra
                     if (tablasDePagina != null && tablasDePagina.Count > 0)
                     {
-                        todasLasTablas.AddRange(tablasDePagina);
+                        foreach (var tabla in tablasDePagina)
+                        {
+                            var firma = CrearFirmaTabla(tabla);
+
+                            if (!firmasVistas.Add(firma))
+                            {
+                                continue;
+                            }
+
+                            todasLasTablas.Add(tabla);
+                        }
                     }
                 }
             }
@@ -120,10 +133,11 @@ namespace SmartExtractor.Api.Services
             }
 
             var tableResponses = new List<TableResponse>();
+            var firmasVistas = new HashSet<string>(StringComparer.Ordinal);
             var algorithm = new SpreadsheetExtractionAlgorithm();
             var tableId = 1;
 
-            using (var document = PdfDocument.Open(path))
+            using (var document = PdfDocument.Open(path, PdfParsingOptions))
             {
                 for (int pageNumber = 1; pageNumber <= document.NumberOfPages; pageNumber++)
                 {
@@ -137,24 +151,19 @@ namespace SmartExtractor.Api.Services
 
                     foreach (var table in tables)
                     {
-                        var filasLimpias = table.Rows.Where(fila =>
-                            fila.Count(celda => !string.IsNullOrWhiteSpace(celda.GetText())) > (fila.Count * 0.4)
-                        ).ToList();
+                        var rows = ConvertirFilas(table);
 
-                        if (filasLimpias.Count == 0)
+                        if (rows.Count == 0)
                         {
                             continue;
                         }
 
-                        var rows = filasLimpias
-                            .Select(fila => fila
-                                .Select(celda =>
-                                {
-                                    var contenido = celda.GetText().Trim();
-                                    return string.IsNullOrWhiteSpace(contenido) ? null : contenido;
-                                })
-                                .ToList())
-                            .ToList();
+                        var firma = CrearFirmaTabla(rows);
+
+                        if (!firmasVistas.Add(firma))
+                        {
+                            continue;
+                        }
 
                         tableResponses.Add(new TableResponse(tableId, pageNumber, $"Tabla {tableId}", rows));
                         tableId++;
@@ -192,6 +201,31 @@ namespace SmartExtractor.Api.Services
             }
 
             return imagenesBytes;
+        }
+
+        private static List<List<string?>> ConvertirFilas(Table table)
+        {
+            return [.. table.Rows.Where(fila =>
+                fila.Count(celda => !string.IsNullOrWhiteSpace(celda.GetText())) > (fila.Count * 0.4)
+            )
+            .Select(fila => fila
+                .Select(celda =>
+                {
+                    var contenido = celda.GetText().Trim();
+                    return string.IsNullOrWhiteSpace(contenido) ? null : contenido;
+                })
+                .ToList())];
+        }
+
+        private static string CrearFirmaTabla(Table table)
+        {
+            return CrearFirmaTabla(ConvertirFilas(table));
+        }
+
+        private static string CrearFirmaTabla(List<List<string?>> rows)
+        {
+            return string.Join("||", rows.Select(fila =>
+                string.Join("|", fila.Select(celda => (celda ?? string.Empty).Trim()))));
         }
     }
 }

@@ -69,7 +69,6 @@ const onDrop = (event: DragEvent) => {
   const file = event.dataTransfer?.files?.[0]
   handleValidFile(file)
 }
-
 </script>
 
 <template>

@@ -43,7 +43,7 @@ services:
       OTEL_SERVICE_NAME: "frontend"
     ports:
     - target: 3000
-      published: 3000
+      published: 3001
     restart: unless-stopped
 networks:
   default:

@@ -3,7 +3,9 @@ const extractionToastId = 'pdf-extraction-toast'
 const excelMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 const buildExtractTablesUrl = (extractTablesEndpoint: string, userPrompt?: string) => {
-  const requestUrl = new URL(extractTablesEndpoint)
+  const requestUrl = extractTablesEndpoint.startsWith('http')
+    ? new URL(extractTablesEndpoint)
+    : new URL(extractTablesEndpoint, window.location.origin)
   const trimmedPrompt = userPrompt?.trim()
 
   if (trimmedPrompt) {
@@ -51,12 +53,11 @@ const downloadBlobFile = (blob: Blob, fileName: string) => {
 }
 
 export const usePdfExtraction = () => {
-  const runtimeConfig = useRuntimeConfig()
   const toast = useToast()
   const isParsing = ref(false)
   const feedbackMessage = ref('')
   const lastDownload = ref<{ blob: Blob, fileName: string } | null>(null)
-  const extractTablesEndpoint = `${runtimeConfig.public.apiBaseUrl}/extract-tables`
+  const extractTablesEndpoint = '/api/extract-tables'
 
   const downloadLatestExcel = () => {
     if (!lastDownload.value) {
@@ -204,7 +205,7 @@ export const usePdfExtraction = () => {
     } catch (error) {
       const message = error instanceof Error
         ? error.message
-        : 'No se pudo enviar el PDF a la API de extraccion.'
+        : 'No se pudo enviar el PDF al servidor de extraccion.'
 
       feedbackMessage.value = `Error al procesar el PDF: ${message}`
       showErrorToast(feedbackMessage.value)

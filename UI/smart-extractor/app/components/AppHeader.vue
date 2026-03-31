@@ -4,7 +4,7 @@
       <span class="font-headline font-black tracking-tighter text-xl text-primary uppercase">Smart extractor</span>
       <div class="h-4 w-px bg-outline-variant/30" />
       <h1 class="font-headline font-bold tracking-tight text-on-surface-variant text-sm uppercase">
-        PDF Data Extractor: Hackathon Edition
+        PDF Table Extractor: Hackathon Edition
       </h1>
     </div>
     <div class="flex items-center gap-6">

@@ -35,7 +35,6 @@ services:
       dockerfile: Dockerfile
     environment:
       PORT: "3000"
-      HOST: "0.0.0.0"
       NODE_ENV: "production"
       NUXT_PUBLIC_API_BASE_URL: "http://smart-extractor-api:8080"
       SMART_EXTRACTOR_API_HTTP: "http://smart-extractor-api:8080"

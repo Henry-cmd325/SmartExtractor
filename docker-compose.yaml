@@ -24,7 +24,7 @@ services:
       OTEL_SERVICE_NAME: "smart-extractor-api"
     ports:
     - target: 8080
-      published: 10000
+      published: 8080
     restart: unless-stopped
   frontend:
     container_name: "frontend"

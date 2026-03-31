@@ -14,6 +14,8 @@ services:
       context: .
       dockerfile: ./SmartExtractor.Api/Dockerfile
     image: "smart-extractor-api:latest"
+    env_file:
+      - .env
     environment:
       OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
       OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
@@ -32,16 +34,17 @@ services:
       context: ./UI/smart-extractor
       dockerfile: Dockerfile
     environment:
+      PORT: "3000"
+      HOST: "0.0.0.0"
       NODE_ENV: "production"
-      PORT: "8080"
       NUXT_PUBLIC_API_BASE_URL: "http://smart-extractor-api:8080"
       SMART_EXTRACTOR_API_HTTP: "http://smart-extractor-api:8080"
       services__smart-extractor-api__http__0: "http://smart-extractor-api:8080"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://aspire-dashboard:18889"
       OTEL_SERVICE_NAME: "frontend"
     ports:
-    - target: 8080
-      published: 8080
+    - target: 3000
+      published: 3000
     restart: unless-stopped
 networks:
   default:

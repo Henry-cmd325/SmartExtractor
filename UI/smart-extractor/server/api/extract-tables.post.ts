@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
   let upstreamResponse: Response
 
   try {
-    upstreamResponse = await fetch(buildExtractTablesUrl(config.apiBaseUrl, userPrompt), {
+    upstreamResponse = await fetch(buildExtractTablesUrl(config.public.apiBaseUrl, userPrompt), {
       method: 'POST',
       body: formData
     })

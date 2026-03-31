@@ -10,7 +10,9 @@ export default defineNuxtConfig({
   ],
 
   runtimeConfig: {
-    apiBaseUrl: 'https://localhost:7114'
+    public: {
+      apiBaseUrl: 'https://localhost:7114'
+    }
   },
 
   vite: {

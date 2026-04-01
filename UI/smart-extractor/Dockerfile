@@ -21,8 +21,10 @@ WORKDIR /app
 
 # Variables para que Nuxt escuche en todas las interfaces dentro de Docker
 ENV NODE_ENV=production
-ENV NUXT_HOST=0.0.0.0
-ENV NUXT_PORT=3000
+ENV HOST=0.0.0.0
+ENV PORT=3000
+ENV NITRO_HOST=0.0.0.0
+ENV NITRO_PORT=3000
 
 # Copiamos solo lo necesario desde la etapa de build
 COPY --from=build /app/.output ./.output

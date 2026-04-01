@@ -11,7 +11,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBaseUrl: 'https://localhost:7114'
+      apiBaseUrl: 'http://smart-extractor-api:8080'
     }
   },
 

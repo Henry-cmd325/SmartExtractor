@@ -19,6 +19,7 @@ export default defineNuxtConfig({
     optimizeDeps: {
       include: [
         'pdfjs-dist',
+        'pdfjs-dist/legacy/build/pdf.mjs' ,
         '@vue/devtools-core',
         '@vue/devtools-kit'
       ]

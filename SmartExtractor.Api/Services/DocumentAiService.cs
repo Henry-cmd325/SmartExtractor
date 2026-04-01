@@ -29,13 +29,16 @@ namespace SmartExtractor.Api.Services
                 2. DYNAMIC LINQ SYNTAX: The filter must be written for the System.Linq.Dynamic.Core library. 
                    - The row data is represented as a string array called `it`. 
                    - Use indices based on the provided metadata (e.g., `it[0]`, `it[1]`).
-                3. NULL/EMPTY SAFETY: Always check for empty strings before parsing numbers. 
-                   - Correct: `it[2] != "" && double.Parse(it[2]) > 500`
-                   - Incorrect: `double.Parse(it[2]) > 500`
-                4. SCHEMA REQUIREMENT: Your output must strictly adhere to this JSON structure:
+                3. HEADER & NULL SAFETY: 
+                    - ALWAYS verify the value is not the column header name before parsing.
+                    - Use: `it[X] == "ColumnName" || !string.IsNullOrWhiteSpace(it[X])`
+                4. TYPE CONVERSION: Use Convert methods or explicit parsing supported by Dynamic LINQ.
+                    - Example (Age > 29): `it[3] == "Edad" || Int32.Parse(it[3]) > 29`
+                    - Example (Salary > 500): `it[2] == "Sueldo" || Double.Parse(it[2]) > 500`
+                5. SCHEMA REQUIREMENT: Your output must strictly adhere to this JSON structure:
                      [
                        {
-                         "tableId": 0,
+                         "tableId": 0 (the tableId of the table that is going to be filtered),
                          "filterExpression": "string (the Dynamic LINQ condition)",
                          "reason": "string (brief explanation of the logic)"
                        }

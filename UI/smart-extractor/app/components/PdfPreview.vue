@@ -266,7 +266,7 @@ onBeforeUnmount(async () => {
         </button>
       </div>
     </div>
-    <div class="flex-1 overflow-hidden p-0 bg-surface-container-lowest">
+    <div class="flex-1 overflow-hidden p-0 bg-surface-container-lowest flex items-center justify-center">
       <div
         v-if="hasPdf"
         ref="previewScrollRef"

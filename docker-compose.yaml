@@ -52,6 +52,13 @@ services:
       OTEL_SERVICE_NAME: "frontend"
     expose:
       - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.smart-extractor.rule=Host(`smartextractor-fullstack-szypv7-e041a1-107-148-105-12.traefik.me`)"
+      - "traefik.http.routers.smart-extractor.entrypoints=web,websecure"
+      - "traefik.http.routers.smart-extractor.tls=true"
+      - "traefik.http.services.smart-extractor.loadbalancer.server.port=3000"
     restart: unless-stopped
     networks:
       - internal

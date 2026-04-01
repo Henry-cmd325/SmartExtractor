@@ -4,9 +4,12 @@ services:
     image: "mcr.microsoft.com/dotnet/aspire-dashboard:9.0"
     environment:
       DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
-    ports:
-      - "18888:18888"
+    expose:
+      - "18888"
+      - "18889"
     restart: unless-stopped
+    networks:
+      - internal
 
   smart-extractor-api:
     # ELIMINADO: container_name
@@ -24,9 +27,11 @@ services:
       HTTP_PORTS: "8080" # Esto es correcto para .NET 9/10
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://aspire-dashboard:18889"
       OTEL_SERVICE_NAME: "smart-extractor-api"
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     restart: unless-stopped
+    networks:
+      - internal
 
   frontend:
     # ELIMINADO: container_name
@@ -42,11 +47,15 @@ services:
       services__smart-extractor-api__http__0: "http://smart-extractor-api:8080"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://aspire-dashboard:18889"
       OTEL_SERVICE_NAME: "frontend"
-    ports:
-      - "3001:3000"
+    expose:
+      - "3000"
     restart: unless-stopped
+    networks:
+      - internal
+      - dokploy-network
 
 networks:
-  default:
+  internal:
+  dokploy-network:
     external: true
     name: dokploy-network

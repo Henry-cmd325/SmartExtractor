@@ -40,5 +40,9 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
+  },
+  // Si usas Nuxt UI, a veces basta con esto:
+  ui: {
+    fonts: false 
   }
 })

@@ -13,6 +13,14 @@ Extraer tablas de un PDF suele ser un proceso rígido que entrega datos "sucios"
   * **Exportación Directa:** Descarga tus datos listos para usar en formato `.xlsx` (Excel).
   * **Interfaz Fluida:** Experiencia de usuario optimizada para carga rápida y previsualización.
 
+## ¿Cómo has utilizado CubePath?
+
+Utilicé la infraestructura de CubePath para desplegar mi instancia de Dokploy, la cual actúa como mi panel de control de operaciones. A través de Docker Compose, configuré el despliegue de mi proyecto asegurando que todos los servicios (Backend, Frontend) estén orquestados correctamente. Además, implementé un flujo de CD (Continuous Deployment) para contar con despliegues automáticos cada vez que realizo un push tag a mi repositorio.
+
+URL: http://smartextractor-fullstack-szypv7-e041a1-107-148-105-12.traefik.me/
+Imagen: 
+<img width="1599" height="765" alt="Image" src="https://github.com/user-attachments/assets/5dd5723a-6930-41a2-8bdc-e62f2163ab0c" />
+
 ## 🛠️ Stack Tecnológico
 
 ### Backend: .NET & FastSharp
